@@ -13,7 +13,11 @@ body{background:#f4f6f9;padding:20px}
 .card{box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:15px}
 </style>
 </head>
-<body>
+<iframe
+name="hiddenFrame"
+style="display:none">
+</iframe>
+ <body>
 <div class="container-fluid">
 <h2>KVK Budget Management System</h2>
 
@@ -85,19 +89,50 @@ function fillHeads(){
    s.appendChild(o);
  });
 }
+function saveExpense(){
 
-async function saveExpense(){
- const payload={
-  action:"addExpense",
-  date:document.getElementById('date').value,
-  voucher:document.getElementById('voucher').value,
-  head:document.getElementById('head').value,
-  amount:Number(document.getElementById('amount').value),
-  remarks:document.getElementById('remarks').value
- };
- await fetch(API_URL,{method:'POST',body:JSON.stringify(payload)});
- alert("Saved");
- loadData();
+  const form = document.createElement("form");
+
+  form.method = "POST";
+
+  form.action = API_URL;
+
+  form.target = "hiddenFrame";
+
+  const fields = {
+
+    date: document.getElementById('date').value,
+    voucher: document.getElementById('voucher').value,
+    head: document.getElementById('head').value,
+    amount: document.getElementById('amount').value,
+    remarks: document.getElementById('remarks').value
+
+  };
+
+  for(const key in fields){
+
+    const input = document.createElement("input");
+
+    input.type = "hidden";
+
+    input.name = key;
+
+    input.value = fields[key];
+
+    form.appendChild(input);
+
+  }
+
+  document.body.appendChild(form);
+
+  form.submit();
+
+  alert("Expense Saved");
+
+  setTimeout(loadData,3000);
+
+}
+
 }
 
 function renderBudget(){
