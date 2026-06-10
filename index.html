@@ -1,1044 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
-
-<title>
-KVK Gurez Budget Management System
-</title>
-
-<link
-href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-rel="stylesheet">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KVK Gurez Budget Management System</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <style>
-
-:root{
-
---primary:#2563eb;
---success:#16a34a;
---danger:#dc2626;
---bg:#eef4ff;
-
-}
-
-body{
-
-background:var(--bg);
-
-font-family:
-Segoe UI,
-sans-serif;
-
-padding:20px;
-
-}
-
-.glass{
-
-background:
-rgba(255,255,255,.8);
-
-backdrop-filter:
-blur(12px);
-
-border-radius:20px;
-
-padding:20px;
-
-margin-bottom:20px;
-
-box-shadow:
-0 8px 20px rgba(0,0,0,.08);
-
-}
-
-.card-value{
-
-font-size:30px;
-
-font-weight:700;
-
-}
-
-.chart-box{
-
-height:250px;
-
-}
-
-.table{
-
-font-size:14px;
-
-}
-
+  :root {
+    --primary: #2563eb;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --bg: #eef4ff;
+  }
+  body { background: var(--bg); font-family: Segoe UI, sans-serif; padding: 20px; }
+  .glass {
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  }
+  .card-value { font-size: 30px; font-weight: 700; }
+  .chart-box { height: 250px; position: relative; }
+  .table { font-size: 14px; }
+  .section-title { background: #2563eb; color: white; font-weight: bold; }
+  .total-row { background: #eef4ff; font-weight: bold; }
+  #loadingOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }
+  #loadingOverlay.active { display: flex; }
+  .spinner-box { background: white; border-radius: 16px; padding: 30px 40px; text-align: center; }
 </style>
-
 </head>
-
 <body>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <div class="spinner-box">
+    <div class="spinner-border text-primary mb-3" role="status"></div>
+    <div id="loadingMsg">Loading data...</div>
+  </div>
+</div>
+
 <div class="container-fluid">
+  <h2 class="mb-4">💰 KVK Gurez Budget Management System</h2>
 
-<h2 class="mb-4">
+  <!-- ALERT AREA -->
+  <div id="alertArea"></div>
 
- KVK Gurez Budget Management System
+  <!-- DASHBOARD -->
+  <div class="row">
+    <div class="col-md-3"><div class="glass"><div>Total Budget</div><div id="totalBudget" class="card-value">₹ 0</div></div></div>
+    <div class="col-md-3"><div class="glass"><div>Total Expenditure</div><div id="totalSpent" class="card-value">₹ 0</div></div></div>
+    <div class="col-md-3"><div class="glass"><div>Balance</div><div id="totalBalance" class="card-value">₹ 0</div></div></div>
+    <div class="col-md-3"><div class="glass"><div>Utilization</div><div id="utilization" class="card-value">0%</div></div></div>
+  </div>
 
-</h2>
-<!-- DASHBOARD -->
+  <!-- ADD EXPENDITURE -->
+  <div class="glass">
+    <h4 class="mb-3">➕ Add Expenditure</h4>
+    <div class="row g-2">
+      <div class="col-md-2">
+        <input type="date" id="date" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <select id="head" class="form-select">
+          <option>Demo Unit</option>
+          <option>Farm Implements (Need Based)</option>
+          <option>Lab Equipment (Need Based)</option>
+          <option>Furniture &amp; Fixtures</option>
+          <option>Computer</option>
+          <option>Solar Panels</option>
+          <option>Communication Expenses</option>
+          <option>Infrastructure Expenses</option>
+          <option>Operational Expenses</option>
+          <option>Other Administrative Expenses (Excluding TA)</option>
+          <option>Other Miscellaneous Expenses</option>
+          <option>Publicity &amp; Exhibitions</option>
+          <option>Repair &amp; Maintenance - Equipment, Vehicle &amp; Others</option>
+          <option>Research Expenses</option>
+          <option>Travelling Allowances / Domestic TA</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <input type="text" id="voucher" class="form-control" placeholder="Voucher No">
+      </div>
+      <div class="col-md-2">
+        <input type="number" id="amount" class="form-control" placeholder="Amount">
+      </div>
+      <div class="col-md-3">
+        <input type="text" id="remarks" class="form-control" placeholder="Remarks">
+      </div>
+    </div>
+    <button class="btn btn-primary mt-3" onclick="saveExpense()">💾 Save Expenditure</button>
+  </div>
 
-<div class="row">
+  <!-- BUDGET STATUS -->
+  <div class="glass">
+    <h4>📊 Budget Status</h4>
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover" id="budgetTable">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Head</th>
+            <th>Budget</th>
+            <th>Spent</th>
+            <th>Balance</th>
+            <th>Utilization</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
-<div class="col-md-3">
+  <!-- CHARTS -->
+  <div class="row">
+    <div class="col-md-6">
+      <div class="glass">
+        <h5>🥧 Budget Utilization</h5>
+        <div class="chart-box"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="glass">
+        <h5>📈 Head Wise Expenditure</h5>
+        <div class="chart-box"><canvas id="barChart"></canvas></div>
+      </div>
+    </div>
+  </div>
 
-<div class="glass">
+  <!-- EXPENDITURE REGISTER -->
+  <div class="glass">
+    <div class="d-flex justify-content-between align-items-center">
+      <h4>📋 Expenditure Register</h4>
+      <input type="text" id="search" class="form-control" style="max-width:300px" placeholder="Search" oninput="filterExpenses()">
+    </div>
+    <br>
+    <div class="table-responsive">
+      <table class="table table-striped" id="expenseTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Voucher</th>
+            <th>Head</th>
+            <th>Amount</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 
-<div>Total Budget</div>
-
-<div
-id="totalBudget"
-class="card-value">
-
-0
-
+  <!-- EXPORTS -->
+  <div class="glass">
+    <button class="btn btn-success" onclick="exportExcel()">📊 Export Excel</button>
+    <button class="btn btn-danger ms-2" onclick="exportPDF()">📄 Export PDF</button>
+    <button class="btn btn-secondary ms-2" onclick="loadData()">🔄 Refresh Data</button>
+  </div>
 </div>
 
-</div>
-
-</div>
-
-<div class="col-md-3">
-
-<div class="glass">
-
-<div>Total Expenditure</div>
-
-<div
-id="totalSpent"
-class="card-value">
-
-0
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-3">
-
-<div class="glass">
-
-<div>Balance</div>
-
-<div
-id="totalBalance"
-class="card-value">
-
-0
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-3">
-
-<div class="glass">
-
-<div>Utilization</div>
-
-<div
-id="utilization"
-class="card-value">
-
-0%
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-
-
-<!-- ADD EXPENDITURE -->
-
-<div class="glass">
-
-<h4 class="mb-3">
-
-➕ Add Expenditure
-
-</h4>
-
-<div class="row g-2">
-
-<div class="col-md-2">
-
-<input
-type="date"
-id="date"
-class="form-control">
-
-</div>
-
-<div class="col-md-3">
-
-<select
-id="head"
-class="form-select">
-
-<option>
-Office Building
-</option>
-
-<option>
-Travelling Allowance
-</option>
-
-<option>
-Research Expenses
-</option>
-
-<option>
-Operational Expenses
-</option>
-
-<option>
-Infrastructure
-</option>
-
-<option>
-Communication
-</option>
-
-<option>
-Others
-</option>
-
-<option>
-Publicity & Exhibitions
-</option>
-
-<option>
-Miscellaneous
-</option>
-
-<option>
-Repair & Maintenance
-</option>
-
-</select>
-
-</div>
-
-<div class="col-md-2">
-
-<input
-type="text"
-id="voucher"
-class="form-control"
-placeholder="Voucher No">
-
-</div>
-
-<div class="col-md-2">
-
-<input
-type="number"
-id="amount"
-class="form-control"
-placeholder="Amount">
-
-</div>
-
-<div class="col-md-3">
-
-<input
-type="text"
-id="remarks"
-class="form-control"
-placeholder="Remarks">
-
-</div>
-
-</div>
-
-<button
-class="btn btn-primary mt-3"
-onclick="saveExpense()">
-
-💾 Save Expenditure
-
-</button>
-
-</div>
-<!-- BUDGET STATUS -->
-
-<div class="glass">
-
-<h4>
-
-📊 Budget Status
-
-</h4>
-
-<div class="table-responsive">
-
-<table
-class="table table-bordered table-hover"
-id="budgetTable">
-
-<thead>
-
-<tr>
-
-<th>Code</th>
-<th>Head</th>
-<th>Budget</th>
-<th>Spent</th>
-<th>Balance</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-
-
-
-<!-- CHARTS -->
-
-<div class="row">
-
-<div class="col-md-6">
-
-<div class="glass">
-
-<h5>
-
-🥧 Budget Utilization
-
-</h5>
-
-<div class="chart-box">
-
-<canvas id="pieChart"></canvas>
-
-</div>
-
-</div>
-
-</div>
-
-<div class="col-md-6">
-
-<div class="glass">
-
-<h5>
-
-📈 Head Wise Expenditure
-
-</h5>
-
-<div class="chart-box">
-
-<canvas id="barChart"></canvas>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-
-
-<!-- EXPENDITURE REGISTER -->
-
-<div class="glass">
-
-<div
-class="d-flex justify-content-between align-items-center">
-
-<h4>
-
-📋 Expenditure Register
-
-</h4>
-
-<input
-type="text"
-id="search"
-class="form-control"
-style="max-width:300px"
-placeholder="Search">
-
-</div>
-
-<br>
-
-<div class="table-responsive">
-
-<table
-class="table table-striped"
-id="expenseTable">
-
-<thead>
-
-<tr>
-
-<th>Date</th>
-<th>Voucher</th>
-<th>Head</th>
-<th>Amount</th>
-<th>Remarks</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-</tbody>
-
-</table>
-
-</div>
-
-</div>
-
-
-
-<!-- EXPORTS -->
-
-<div class="glass">
-
-<button
-class="btn btn-success"
-onclick="exportExcel()">
-
-📊 Export Excel
-
-</button>
-
-<button
-class="btn btn-danger ms-2"
-onclick="exportPDF()">
-
-📄 Export PDF
-
-</button>
-
-</div>
 <script>
-
-const API_URL =
-"https://script.google.com/macros/s/AKfycbxmRlbS0erppMclrMEMyePAQek1oWkKZ-q7YMlV4c9t5jlUNgCkPuU4iqhpl46Y-n0Wew/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxmRlbS0erppMclrMEMyePAQek1oWkKZ-q7YMlV4c9t5jlUNgCkPuU4iqhpl46Y-n0Wew/exec";
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfR-BWJRAWFQ5zRhH_D9A1f9Df3g2LYE4vC-5TDzR7NSBFkiA/formResponse";
 
 let budgetHeads = [];
 let expenditures = [];
+let pieChartInstance = null;
+let barChartInstance = null;
 
-let pieChart = null;
-let barChart = null;
+// ── UTILITIES ──────────────────────────────────────────────
 
-
-/* SAVE TO GOOGLE FORM */
-
-function saveExpense(){
-
-const date =
-document.getElementById("date").value;
-
-const voucher =
-document.getElementById("voucher").value;
-
-const head =
-document.getElementById("head").value;
-
-const amount =
-document.getElementById("amount").value;
-
-const remarks =
-document.getElementById("remarks").value;
-
-if(
-!date ||
-!voucher ||
-!amount
-){
-
-alert(
-"Please fill all fields"
-);
-
-return;
-
+function showAlert(msg, type = "danger") {
+  const area = document.getElementById("alertArea");
+  area.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+    ${msg}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>`;
 }
 
-const formData =
-new FormData();
-
-formData.append(
-"entry.825311518",
-date
-);
-
-formData.append(
-"entry.947184684",
-voucher
-);
-
-formData.append(
-"entry.1891027260",
-head
-);
-
-formData.append(
-"entry.1930864869",
-amount
-);
-
-formData.append(
-"entry.1184374967",
-remarks
-);
-
-fetch(
-"https://docs.google.com/forms/d/e/1FAIpQLSfR-BWJRAWFQ5zRhH_D9A1f9Df3g2LYE4vC-5TDzR7NSBFkiA/formResponse",
-{
-method:"POST",
-mode:"no-cors",
-body:formData
-}
-);
-
-alert(
-"Expense Saved Successfully"
-);
-
-document.getElementById("date").value="";
-document.getElementById("voucher").value="";
-document.getElementById("amount").value="";
-document.getElementById("remarks").value="";
-
-setTimeout(
-loadData,
-5000
-);
-
+function showLoading(msg = "Loading data...") {
+  document.getElementById("loadingMsg").textContent = msg;
+  document.getElementById("loadingOverlay").classList.add("active");
 }
 
-
-
-/* LOAD DATA */
-
-async function loadData(){
-
-try{
-
-const response =
-await fetch(API_URL);
-
-const data =
-await response.json();
-
-budgetHeads =
-data.budgetHeads.slice(1);
-
-expenditures =
-data.expenditures.slice(1);
-
-renderDashboard();
-
-renderBudgetTable();
-
-renderExpenseTable();
-
-renderCharts();
-
+function hideLoading() {
+  document.getElementById("loadingOverlay").classList.remove("active");
 }
 
-catch(err){
+// ── SAVE EXPENSE ───────────────────────────────────────────
 
-console.log(err);
+function saveExpense() {
+  const date    = document.getElementById("date").value;
+  const voucher = document.getElementById("voucher").value.trim();
+  const head    = document.getElementById("head").value;
+  const amount  = document.getElementById("amount").value;
+  const remarks = document.getElementById("remarks").value.trim();
 
+  if (!date || !voucher || !amount) {
+    showAlert("Please fill Date, Voucher No, and Amount.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("entry.825311518",  date);
+  formData.append("entry.947184684",  voucher);
+  formData.append("entry.1891027260", head);
+  formData.append("entry.1930864869", amount);
+  formData.append("entry.1184374967", remarks);
+
+  showLoading("Saving expenditure...");
+
+  fetch(FORM_URL, { method: "POST", mode: "no-cors", body: formData })
+    .then(() => {
+      hideLoading();
+      showAlert("Expense saved successfully! Data will refresh in 5 seconds.", "success");
+      document.getElementById("date").value    = "";
+      document.getElementById("voucher").value = "";
+      document.getElementById("amount").value  = "";
+      document.getElementById("remarks").value = "";
+      setTimeout(loadData, 5000);
+    })
+    .catch(err => {
+      hideLoading();
+      showAlert("Failed to save expense: " + err.message);
+    });
 }
 
+// ── LOAD DATA ──────────────────────────────────────────────
+
+async function loadData() {
+  showLoading("Fetching data from Google Sheets...");
+  try {
+    // Append timestamp to bust cache
+    const res  = await fetch(API_URL + "?t=" + Date.now());
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+
+    if (!data.budgetHeads || !data.expenditures) {
+      throw new Error("Unexpected data format from API. Check your Google Apps Script.");
+    }
+
+    // Row 0 is header — skip it
+    budgetHeads  = data.budgetHeads.slice(1);
+    expenditures = data.expenditures.slice(1);
+
+    renderDashboard();
+    renderBudgetTable();
+    renderExpenseTable(expenditures);
+    renderCharts();
+    hideLoading();
+  } catch (err) {
+    hideLoading();
+    showAlert("⚠️ Could not load data: " + err.message +
+      "<br><small>Check your Apps Script URL and make sure it's deployed as 'Anyone' access.</small>");
+    console.error(err);
+  }
 }
 
+// ── DASHBOARD ──────────────────────────────────────────────
 
+function renderDashboard() {
+  const skipLabels = new Set(["CAPITAL","RECURRING","TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"]);
+  let totalBudget = 0, totalSpent = 0;
 
-/* DASHBOARD */
+  budgetHeads.forEach(x => {
+    if (!skipLabels.has(x[0])) totalBudget += Number(x[2] || 0);
+  });
+  expenditures.forEach(x => {
+    totalSpent += Number(x[4] || 0);
+  });
 
-function renderDashboard(){
+  const balance     = totalBudget - totalSpent;
+  const utilization = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-let totalBudget = 0;
-let totalSpent = 0;
-
-budgetHeads.forEach(x=>{
-
-totalBudget +=
-Number(x[2] || 0);
-
-});
-
-expenditures.forEach(x=>{
-
-totalSpent +=
-Number(x[4] || 0);
-
-});
-
-const balance =
-totalBudget-totalSpent;
-
-document.getElementById(
-"totalBudget"
-).innerText =
-totalBudget.toLocaleString();
-
-document.getElementById(
-"totalSpent"
-).innerText =
-totalSpent.toLocaleString();
-
-document.getElementById(
-"totalBalance"
-).innerText =
-balance.toLocaleString();
-
-document.getElementById(
-"utilization"
-).innerText =
-(
-(totalSpent/totalBudget)*100
-).toFixed(2)+"%";
-
+  document.getElementById("totalBudget").textContent  = "₹ " + totalBudget.toLocaleString("en-IN");
+  document.getElementById("totalSpent").textContent   = "₹ " + totalSpent.toLocaleString("en-IN");
+  document.getElementById("totalBalance").textContent = "₹ " + balance.toLocaleString("en-IN");
+  document.getElementById("utilization").textContent  = utilization.toFixed(1) + "%";
 }
 
+// ── BUDGET TABLE ───────────────────────────────────────────
 
+function renderBudgetTable() {
+  const tbody = document.querySelector("#budgetTable tbody");
+  tbody.innerHTML = "";
 
-/* BUDGET TABLE */
+  budgetHeads.forEach(head => {
 
-function renderBudgetTable(){
+    if (head[0] === "CAPITAL" || head[0] === "RECURRING") {
+      tbody.innerHTML += `<tr class="section-title"><td colspan="6">${head[0]}</td></tr>`;
+      return;
+    }
 
-const tbody =
-document.querySelector(
-"#budgetTable tbody"
-);
+    if (["TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"].includes(head[0])) {
+      tbody.innerHTML += `
+        <tr class="total-row">
+          <td>${head[0]}</td><td></td>
+          <td>₹ ${Number(head[2]||0).toLocaleString("en-IN")}</td>
+          <td></td><td></td><td></td>
+        </tr>`;
+      return;
+    }
 
-tbody.innerHTML="";
+    const spent = expenditures
+      .filter(x => x[3] === head[1])
+      .reduce((a, b) => a + Number(b[4] || 0), 0);
 
-budgetHeads.forEach(head=>{
+    const budget      = Number(head[2] || 0);
+    const balance     = budget - spent;
+    const utilization = budget > 0 ? (spent / budget) * 100 : 0;
+    const status      = utilization >= 80 ? "🔴" : utilization >= 50 ? "🟡" : "🟢";
 
-const spent =
-expenditures
-.filter(
-x=>x[3]===head[1]
-)
-.reduce(
-(a,b)=>
-a+Number(b[4]||0),
-0
-);
-
-const balance =
-Number(head[2])-spent;
-
-tbody.innerHTML += `
-
-<tr>
-
-<td>${head[0]}</td>
-
-<td>${head[1]}</td>
-
-<td>
-${Number(head[2])
-.toLocaleString()}
-</td>
-
-<td>
-${spent.toLocaleString()}
-</td>
-
-<td>
-${balance.toLocaleString()}
-</td>
-
-</tr>
-
-`;
-
-});
-
-}
-/* REGISTER */
-
-function renderExpenseTable(){
-
-const tbody =
-document.querySelector(
-"#expenseTable tbody"
-);
-
-tbody.innerHTML = "";
-
-expenditures.forEach(row=>{
-
-tbody.innerHTML += `
-
-<tr>
-
-<td>${row[1] || ""}</td>
-
-<td>${row[2] || ""}</td>
-
-<td>${row[3] || ""}</td>
-
-<td>${row[4] || ""}</td>
-
-<td>${row[5] || ""}</td>
-
-</tr>
-
-`;
-
-});
-
+    tbody.innerHTML += `
+      <tr>
+        <td>${head[0] || ""}</td>
+        <td>${head[1] || ""}</td>
+        <td>₹ ${budget.toLocaleString("en-IN")}</td>
+        <td>₹ ${spent.toLocaleString("en-IN")}</td>
+        <td>₹ ${balance.toLocaleString("en-IN")}</td>
+        <td>${status} ${utilization.toFixed(1)}%</td>
+      </tr>`;
+  });
 }
 
+// ── EXPENSE TABLE ──────────────────────────────────────────
 
-
-/* SEARCH */
-
-document.addEventListener(
-"input",
-function(e){
-
-if(
-e.target.id==="search"
-){
-
-const value =
-e.target.value.toLowerCase();
-
-document
-.querySelectorAll(
-"#expenseTable tbody tr"
-)
-.forEach(row=>{
-
-row.style.display =
-row.innerText
-.toLowerCase()
-.includes(value)
-? ""
-: "none";
-
-});
-
+function renderExpenseTable(rows) {
+  const tbody = document.querySelector("#expenseTable tbody");
+  tbody.innerHTML = "";
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No expenditures found.</td></tr>`;
+    return;
+  }
+  rows.forEach(row => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${row[1] || ""}</td>
+        <td>${row[2] || ""}</td>
+        <td>${row[3] || ""}</td>
+        <td>₹ ${Number(row[4] || 0).toLocaleString("en-IN")}</td>
+        <td>${row[5] || ""}</td>
+      </tr>`;
+  });
 }
 
-});
+// ── SEARCH / FILTER ────────────────────────────────────────
 
-
-
-/* CHARTS */
-
-function renderCharts(){
-
-let totalBudget = 0;
-let totalSpent = 0;
-
-budgetHeads.forEach(x=>{
-
-totalBudget +=
-Number(x[2] || 0);
-
-});
-
-expenditures.forEach(x=>{
-
-totalSpent +=
-Number(x[4] || 0);
-
-});
-
-
-if(pieChart)
-pieChart.destroy();
-
-pieChart =
-new Chart(
-
-document.getElementById(
-"pieChart"
-),
-
-{
-
-type:"pie",
-
-data:{
-
-labels:[
-"Spent",
-"Balance"
-],
-
-datasets:[{
-
-data:[
-
-totalSpent,
-
-totalBudget-totalSpent
-
-]
-
-}]
-
-},
-
-options:{
-
-responsive:true,
-
-maintainAspectRatio:false
-
+function filterExpenses() {
+  const q = document.getElementById("search").value.toLowerCase();
+  const filtered = expenditures.filter(row =>
+    row.some(cell => String(cell || "").toLowerCase().includes(q))
+  );
+  renderExpenseTable(filtered);
 }
 
+// ── CHARTS ─────────────────────────────────────────────────
+
+function renderCharts() {
+  const skipLabels = new Set(["CAPITAL","RECURRING","TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"]);
+  const normalHeads = budgetHeads.filter(h => h[1] && !skipLabels.has(h[0]));
+
+  const labels  = normalHeads.map(h => h[1]);
+  const budgets = normalHeads.map(h => Number(h[2] || 0));
+  const spents  = normalHeads.map(h =>
+    expenditures.filter(x => x[3] === h[1]).reduce((a, b) => a + Number(b[4] || 0), 0)
+  );
+
+  const totalBudget = budgets.reduce((a, b) => a + b, 0);
+  const totalSpent  = spents.reduce((a, b)  => a + b, 0);
+
+  // Pie Chart
+  if (pieChartInstance) pieChartInstance.destroy();
+  pieChartInstance = new Chart(document.getElementById("pieChart"), {
+    type: "pie",
+    data: {
+      labels: ["Spent", "Remaining"],
+      datasets: [{
+        data: [totalSpent, Math.max(0, totalBudget - totalSpent)],
+        backgroundColor: ["#dc2626", "#16a34a"]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } }
+    }
+  });
+
+  // Bar Chart
+  if (barChartInstance) barChartInstance.destroy();
+  barChartInstance = new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [
+        { label: "Budget",  data: budgets, backgroundColor: "#2563eb" },
+        { label: "Spent",   data: spents,  backgroundColor: "#dc2626" }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: { x: { ticks: { maxRotation: 45, font: { size: 10 } } } }
+    }
+  });
 }
 
-);
+// ── EXPORT EXCEL ───────────────────────────────────────────
 
+function exportExcel() {
+  if (!expenditures.length) { showAlert("No data to export.", "warning"); return; }
 
+  const wsData = [["Date","Voucher","Head","Amount","Remarks"]];
+  expenditures.forEach(row => wsData.push([row[1],row[2],row[3],Number(row[4]||0),row[5]]));
 
-const headNames =
-budgetHeads.map(
-x=>x[1]
-);
-
-const headSpent =
-budgetHeads.map(head=>{
-
-return expenditures
-
-.filter(
-x=>x[3]===head[1]
-)
-
-.reduce(
-(a,b)=>
-a+Number(b[4] || 0),
-0
-);
-
-});
-
-
-if(barChart)
-barChart.destroy();
-
-barChart =
-new Chart(
-
-document.getElementById(
-"barChart"
-),
-
-{
-
-type:"bar",
-
-data:{
-
-labels:
-headNames,
-
-datasets:[{
-
-label:
-"Expenditure",
-
-data:
-headSpent
-
-}]
-
-},
-
-options:{
-
-responsive:true,
-
-maintainAspectRatio:false
-
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, "Expenditures");
+  XLSX.writeFile(wb, "KVK_Gurez_Expenditures.xlsx");
 }
 
+// ── EXPORT PDF ─────────────────────────────────────────────
+
+function exportPDF() {
+  if (!expenditures.length) { showAlert("No data to export.", "warning"); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  doc.setFontSize(14);
+  doc.text("KVK Gurez - Expenditure Register", 14, 15);
+  doc.setFontSize(10);
+  doc.text("Generated: " + new Date().toLocaleDateString("en-IN"), 14, 22);
+
+  const headers = [["Date","Voucher","Head","Amount","Remarks"]];
+  const rows = expenditures.map(r => [r[1],r[2],r[3],"₹"+Number(r[4]||0).toLocaleString("en-IN"),r[5]]);
+
+  // Use autoTable if available, else simple text fallback
+  if (doc.autoTable) {
+    doc.autoTable({ head: headers, body: rows, startY: 28, styles: { fontSize: 9 } });
+  } else {
+    let y = 35;
+    doc.setFontSize(8);
+    rows.forEach(r => {
+      doc.text(r.join("   |   "), 14, y);
+      y += 6;
+      if (y > 190) { doc.addPage(); y = 15; }
+    });
+  }
+
+  doc.save("KVK_Gurez_Expenditures.pdf");
 }
 
-);
-
-}
-
-
-
-/* EXCEL EXPORT */
-
-function exportExcel(){
-
-const ws =
-XLSX.utils.table_to_sheet(
-
-document.getElementById(
-"expenseTable"
-)
-
-);
-
-const wb =
-XLSX.utils.book_new();
-
-XLSX.utils.book_append_sheet(
-
-wb,
-
-ws,
-
-"Expenditure"
-
-);
-
-XLSX.writeFile(
-
-wb,
-
-"KVK_Expenditure.xlsx"
-
-);
-
-}
-
-
-
-/* PDF EXPORT */
-
-async function exportPDF(){
-
-const { jsPDF } =
-window.jspdf;
-
-const doc =
-new jsPDF();
-
-doc.text(
-
-"KVK Budget Report",
-
-15,
-
-15
-
-);
-
-let y = 30;
-
-expenditures.forEach(x=>{
-
-doc.text(
-
-`${x[1]} | ${x[2]} | ${x[3]} | ${x[4]}`,
-
-10,
-
-y
-
-);
-
-y += 8;
-
-});
-
-doc.save(
-"KVK_Report.pdf"
-);
-
-}
-
-
-
-/* START */
-
+// ── INIT ───────────────────────────────────────────────────
 loadData();
-
-/* refresh every 10 sec */
-
-setInterval(
-loadData,
-10000
-);
-
 </script>
 
+<!-- Bootstrap JS for alert dismiss -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
-</html>
-<footer
-class="glass text-center">
-
-<h6>
-
-KVK Budget Management System
-
-</h6>
-
-<p
-style="
-margin:0;
-font-size:13px;
-color:#666;">
-
-Developed & Maintained by
-
-<strong>
-Tanzeer Khan
-</strong>
-
-</p>
-
-</footer>
-
-</body>
-
-</html>
-</body>
-
 </html>
