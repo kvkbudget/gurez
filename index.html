@@ -3,203 +3,690 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KVK Gurez Budget Management System</title>
+<title>KVK Gurez — Budget Management System</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  :root {
-    --primary: #2563eb;
-    --success: #16a34a;
-    --danger: #dc2626;
-    --bg: #eef4ff;
-  }
-  body { background: var(--bg); font-family: Segoe UI, sans-serif; padding: 20px; }
-  .glass {
-    background: rgba(255,255,255,.85);
-    backdrop-filter: blur(12px);
-    border-radius: 20px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 8px 20px rgba(0,0,0,.08);
-  }
-  .card-value { font-size: 30px; font-weight: 700; }
-  .chart-box { height: 250px; position: relative; }
-  .table { font-size: 14px; }
-  .section-title { background: #2563eb; color: white; font-weight: bold; }
-  .total-row { background: #eef4ff; font-weight: bold; }
-  #loadingOverlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.3);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-  }
-  #loadingOverlay.active { display: flex; }
-  .spinner-box { background: white; border-radius: 16px; padding: 30px 40px; text-align: center; }
+/* ── BASE ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:        #1d4ed8;
+  --blue-light:  #3b82f6;
+  --blue-faint:  #eff6ff;
+  --green:       #15803d;
+  --green-light: #22c55e;
+  --green-faint: #f0fdf4;
+  --amber:       #b45309;
+  --amber-faint: #fffbeb;
+  --red:         #b91c1c;
+  --red-light:   #ef4444;
+  --red-faint:   #fef2f2;
+  --slate-900:   #0f172a;
+  --slate-700:   #334155;
+  --slate-500:   #64748b;
+  --slate-200:   #e2e8f0;
+  --slate-100:   #f1f5f9;
+  --slate-50:    #f8fafc;
+  --white:       #ffffff;
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:   0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.05);
+  --shadow-lg:   0 10px 30px rgba(0,0,0,.1);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #eef2f7;
+  color: var(--slate-700);
+  min-height: 100vh;
+}
+
+/* ── TOPBAR ───────────────────────────────────────────────── */
+.topbar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 60%, #2563eb 100%);
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(29,78,216,.35);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+}
+
+.topbar-brand .logo-icon {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,.18);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+
+.topbar-brand h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.3px;
+  line-height: 1.2;
+}
+
+.topbar-brand p {
+  font-size: 11px;
+  opacity: .75;
+  margin-top: 2px;
+}
+
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge-year {
+  background: rgba(255,255,255,.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,.25);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.btn-refresh-top {
+  background: rgba(255,255,255,.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,.25);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-refresh-top:hover { background: rgba(255,255,255,.25); }
+
+/* ── MAIN WRAPPER ─────────────────────────────────────────── */
+.main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+/* ── CARDS ────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--slate-200);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--slate-100);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--slate-900);
+  margin: 0;
+}
+
+.card-header .header-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+
+.icon-blue  { background: var(--blue-faint);  color: var(--blue); }
+.icon-green { background: var(--green-faint); color: var(--green); }
+.icon-amber { background: var(--amber-faint); color: var(--amber); }
+.icon-red   { background: var(--red-faint);   color: var(--red); }
+
+.card-body { padding: 22px; }
+
+/* ── STAT CARDS ───────────────────────────────────────────── */
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; margin-bottom: 24px; }
+
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--slate-200);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+}
+
+.stat-card.blue::before  { background: var(--blue-light); }
+.stat-card.green::before { background: var(--green-light); }
+.stat-card.amber::before { background: #f59e0b; }
+.stat-card.red::before   { background: var(--red-light); }
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--slate-500);
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--slate-900);
+  letter-spacing: -.5px;
+  line-height: 1;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--slate-500);
+  margin-top: 6px;
+}
+
+/* ── PROGRESS BAR ─────────────────────────────────────────── */
+.progress-bar-wrap {
+  height: 5px;
+  background: var(--slate-100);
+  border-radius: 99px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .6s ease;
+}
+
+/* ── FORM ─────────────────────────────────────────────────── */
+.form-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--slate-500);
+  margin-bottom: 5px;
+  display: block;
+}
+
+.form-control, .form-select {
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  padding: 9px 12px;
+  color: var(--slate-900);
+  transition: border-color .2s, box-shadow .2s;
+  background: var(--slate-50);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--blue-light);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+  background: white;
+  outline: none;
+}
+
+/* ── BUTTONS ──────────────────────────────────────────────── */
+.btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .18s;
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: white;
+  box-shadow: 0 2px 8px rgba(29,78,216,.35);
+}
+.btn-primary:hover { background: #1e40af; transform: translateY(-1px); }
+
+.btn-success {
+  background: var(--green);
+  color: white;
+  box-shadow: 0 2px 8px rgba(21,128,61,.3);
+}
+.btn-success:hover { background: #166534; transform: translateY(-1px); }
+
+.btn-danger {
+  background: var(--red);
+  color: white;
+  box-shadow: 0 2px 8px rgba(185,28,28,.3);
+}
+.btn-danger:hover { background: #991b1b; transform: translateY(-1px); }
+
+.btn-outline {
+  background: white;
+  color: var(--slate-700);
+  border: 1.5px solid var(--slate-200);
+}
+.btn-outline:hover { background: var(--slate-50); border-color: var(--slate-300); }
+
+/* ── TABLE ────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  background: var(--slate-50);
+  color: var(--slate-500);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  padding: 11px 14px;
+  border-bottom: 2px solid var(--slate-200);
+  white-space: nowrap;
+}
+
+.data-table tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--slate-100);
+  color: var(--slate-700);
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table tbody tr:hover td { background: var(--blue-faint); }
+
+.row-section {
+  background: linear-gradient(90deg, #1d4ed8, #2563eb) !important;
+}
+.row-section td {
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  padding: 8px 14px !important;
+}
+
+.row-total td {
+  background: var(--slate-50) !important;
+  font-weight: 700 !important;
+  color: var(--slate-900) !important;
+  border-top: 2px solid var(--slate-200) !important;
+}
+
+/* utilization badges */
+.util-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.util-green { background: var(--green-faint); color: var(--green); }
+.util-amber { background: var(--amber-faint); color: var(--amber); }
+.util-red   { background: var(--red-faint);   color: var(--red); }
+
+.util-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-green { background: var(--green-light); }
+.dot-amber { background: #f59e0b; }
+.dot-red   { background: var(--red-light); }
+
+/* ── SEARCH ───────────────────────────────────────────────── */
+.search-wrap {
+  position: relative;
+}
+.search-wrap input {
+  padding-left: 34px;
+}
+.search-wrap::before {
+  content: '🔍';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* ── CHART AREA ───────────────────────────────────────────── */
+.chart-box { height: 260px; position: relative; }
+
+/* ── ALERT ────────────────────────────────────────────────── */
+.sys-alert {
+  padding: 13px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid;
+}
+.sys-alert.success { background: var(--green-faint); border-color: #bbf7d0; color: var(--green); }
+.sys-alert.danger  { background: var(--red-faint);   border-color: #fecaca; color: var(--red); }
+.sys-alert.warning { background: var(--amber-faint); border-color: #fde68a; color: var(--amber); }
+.sys-alert .close-btn { margin-left: auto; cursor: pointer; opacity: .6; background: none; border: none; font-size: 16px; color: inherit; }
+
+/* ── LOADING ──────────────────────────────────────────────── */
+#loadingOverlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.45);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+#loadingOverlay.active { display: flex; }
+.spinner-box {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 32px 48px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.spinner-box p { font-size: 13px; color: var(--slate-500); margin-top: 12px; }
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--slate-200);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 0 auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── RESPONSIVE ───────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
+  .main { padding: 16px; }
+  .topbar { padding: 14px 16px; }
+}
+@media (max-width: 560px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .stat-value { font-size: 20px; }
+  .topbar-brand h1 { font-size: 14px; }
+}
+
+.mb-24 { margin-bottom: 24px; }
+.gap-10 { gap: 10px; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
 </style>
 </head>
 <body>
 
-<!-- Loading Overlay -->
+<!-- LOADING -->
 <div id="loadingOverlay">
   <div class="spinner-box">
-    <div class="spinner-border text-primary mb-3" role="status"></div>
-    <div id="loadingMsg">Loading data...</div>
+    <div class="spinner"></div>
+    <p id="loadingMsg">Loading data…</p>
   </div>
 </div>
 
-<div class="container-fluid">
-  <h2 class="mb-4">💰 KVK Gurez Budget Management System</h2>
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="logo-icon">💰</div>
+    <div>
+      <h1>KVK Gurez</h1>
+      <p>Budget Management System</p>
+    </div>
+  </div>
+  <div class="topbar-meta">
+    <span class="badge-year" id="fyLabel">FY 2024–25</span>
+    <button class="btn-refresh-top" onclick="loadData()">⟳ Refresh</button>
+  </div>
+</div>
 
-  <!-- ALERT AREA -->
+<div class="main">
+
+  <!-- ALERTS -->
   <div id="alertArea"></div>
 
-  <!-- DASHBOARD -->
-  <div class="row">
-    <div class="col-md-3"><div class="glass"><div>Total Budget</div><div id="totalBudget" class="card-value">₹ 0</div></div></div>
-    <div class="col-md-3"><div class="glass"><div>Total Expenditure</div><div id="totalSpent" class="card-value">₹ 0</div></div></div>
-    <div class="col-md-3"><div class="glass"><div>Balance</div><div id="totalBalance" class="card-value">₹ 0</div></div></div>
-    <div class="col-md-3"><div class="glass"><div>Utilization</div><div id="utilization" class="card-value">0%</div></div></div>
+  <!-- STAT CARDS -->
+  <div class="stat-grid">
+    <div class="stat-card blue">
+      <div class="stat-label">Total Budget</div>
+      <div class="stat-value" id="totalBudget">₹ —</div>
+      <div class="stat-sub">Sanctioned allocation</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Total Expenditure</div>
+      <div class="stat-value" id="totalSpent">₹ —</div>
+      <div class="stat-sub">Cumulative spending</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Balance</div>
+      <div class="stat-value" id="totalBalance">₹ —</div>
+      <div class="stat-sub">Available funds</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-label">Utilization</div>
+      <div class="stat-value" id="utilization">—%</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="utilBar" style="width:0%;background:#f59e0b"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ADD EXPENDITURE -->
-  <div class="glass">
-    <h4 class="mb-3">➕ Add Expenditure</h4>
-    <div class="row g-2">
-      <div class="col-md-2">
-        <input type="date" id="date" class="form-control">
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="header-icon icon-blue">➕</div>
+      <h4>Add New Expenditure</h4>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label">Date</label>
+          <input type="date" id="date" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Budget Head</label>
+          <select id="head" class="form-select">
+            <option>Demo Unit</option>
+            <option>Farm Implements (Need Based)</option>
+            <option>Lab Equipment (Need Based)</option>
+            <option>Furniture &amp; Fixtures</option>
+            <option>Computer</option>
+            <option>Solar Panels</option>
+            <option>Communication Expenses</option>
+            <option>Infrastructure Expenses</option>
+            <option>Operational Expenses</option>
+            <option>Other Administrative Expenses (Excluding TA)</option>
+            <option>Other Miscellaneous Expenses</option>
+            <option>Publicity &amp; Exhibitions</option>
+            <option>Repair &amp; Maintenance - Equipment, Vehicle &amp; Others</option>
+            <option>Research Expenses</option>
+            <option>Travelling Allowances/ Domestic TA</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Voucher No.</label>
+          <input type="text" id="voucher" class="form-control" placeholder="e.g. V-001">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Amount (₹)</label>
+          <input type="number" id="amount" class="form-control" placeholder="0">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Remarks</label>
+          <input type="text" id="remarks" class="form-control" placeholder="Optional note">
+        </div>
       </div>
-      <div class="col-md-3">
-        <select id="head" class="form-select">
-          <option>Demo Unit</option>
-          <option>Farm Implements (Need Based)</option>
-          <option>Lab Equipment (Need Based)</option>
-          <option>Furniture &amp; Fixtures</option>
-          <option>Computer</option>
-          <option>Solar Panels</option>
-          <option>Communication Expenses</option>
-          <option>Infrastructure Expenses</option>
-          <option>Operational Expenses</option>
-          <option>Other Administrative Expenses (Excluding TA)</option>
-          <option>Other Miscellaneous Expenses</option>
-          <option>Publicity &amp; Exhibitions</option>
-          <option>Repair &amp; Maintenance - Equipment, Vehicle &amp; Others</option>
-          <option>Research Expenses</option>
-          <option>Travelling Allowances / Domestic TA</option>
-        </select>
-      </div>
-      <div class="col-md-2">
-        <input type="text" id="voucher" class="form-control" placeholder="Voucher No">
-      </div>
-      <div class="col-md-2">
-        <input type="number" id="amount" class="form-control" placeholder="Amount">
-      </div>
-      <div class="col-md-3">
-        <input type="text" id="remarks" class="form-control" placeholder="Remarks">
+      <div style="margin-top:18px">
+        <button class="btn btn-primary" onclick="saveExpense()">💾 Save Expenditure</button>
       </div>
     </div>
-    <button class="btn btn-primary mt-3" onclick="saveExpense()">💾 Save Expenditure</button>
   </div>
 
-  <!-- BUDGET STATUS -->
-  <div class="glass">
-    <h4>📊 Budget Status</h4>
-    <div class="table-responsive">
-      <table class="table table-bordered table-hover" id="budgetTable">
+  <!-- BUDGET STATUS TABLE -->
+  <div class="card mb-24">
+    <div class="card-header">
+      <div class="header-icon icon-blue">📊</div>
+      <h4>Budget Status</h4>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="budgetTable">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Head</th>
-            <th>Budget</th>
-            <th>Spent</th>
-            <th>Balance</th>
-            <th>Utilization</th>
+            <th style="width:90px">Code</th>
+            <th>Budget Head</th>
+            <th style="text-align:right">Allocated (₹)</th>
+            <th style="text-align:right">Spent (₹)</th>
+            <th style="text-align:right">Balance (₹)</th>
+            <th style="width:130px">Utilization</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="budgetTbody"></tbody>
       </table>
     </div>
   </div>
 
   <!-- CHARTS -->
-  <div class="row">
-    <div class="col-md-6">
-      <div class="glass">
-        <h5>🥧 Budget Utilization</h5>
-        <div class="chart-box"><canvas id="pieChart"></canvas></div>
+  <div class="row g-4 mb-24">
+    <div class="col-md-5">
+      <div class="card" style="height:100%">
+        <div class="card-header">
+          <div class="header-icon icon-amber">🥧</div>
+          <h4>Overall Utilization</h4>
+        </div>
+        <div class="card-body">
+          <div class="chart-box"><canvas id="pieChart"></canvas></div>
+        </div>
       </div>
     </div>
-    <div class="col-md-6">
-      <div class="glass">
-        <h5>📈 Head Wise Expenditure</h5>
-        <div class="chart-box"><canvas id="barChart"></canvas></div>
+    <div class="col-md-7">
+      <div class="card" style="height:100%">
+        <div class="card-header">
+          <div class="header-icon icon-blue">📈</div>
+          <h4>Head-wise Budget vs Expenditure</h4>
+        </div>
+        <div class="card-body">
+          <div class="chart-box"><canvas id="barChart"></canvas></div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- EXPENDITURE REGISTER -->
-  <div class="glass">
-    <div class="d-flex justify-content-between align-items-center">
-      <h4>📋 Expenditure Register</h4>
-      <input type="text" id="search" class="form-control" style="max-width:300px" placeholder="Search" oninput="filterExpenses()">
+  <div class="card mb-24">
+    <div class="card-header justify-between flex-wrap" style="gap:10px">
+      <div class="flex items-center gap-10">
+        <div class="header-icon icon-green">📋</div>
+        <h4>Expenditure Register</h4>
+      </div>
+      <div class="search-wrap">
+        <input type="text" id="search" class="form-control" style="width:260px" placeholder="Search entries…" oninput="filterExpenses()">
+      </div>
     </div>
-    <br>
-    <div class="table-responsive">
-      <table class="table table-striped" id="expenseTable">
+    <div style="overflow-x:auto">
+      <table class="data-table" id="expenseTable">
         <thead>
           <tr>
             <th>Date</th>
-            <th>Voucher</th>
-            <th>Head</th>
-            <th>Amount</th>
+            <th>Voucher No.</th>
+            <th>Budget Head</th>
+            <th style="text-align:right">Amount (₹)</th>
             <th>Remarks</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="expenseTbody"></tbody>
       </table>
     </div>
   </div>
 
   <!-- EXPORTS -->
-  <div class="glass">
-    <button class="btn btn-success" onclick="exportExcel()">📊 Export Excel</button>
-    <button class="btn btn-danger ms-2" onclick="exportPDF()">📄 Export PDF</button>
-    <button class="btn btn-secondary ms-2" onclick="loadData()">🔄 Refresh Data</button>
+  <div class="card">
+    <div class="card-body flex flex-wrap" style="gap:10px;align-items:center">
+      <span style="font-size:13px;font-weight:600;color:var(--slate-500);margin-right:6px">Export:</span>
+      <button class="btn btn-success" onclick="exportExcel()">📊 Excel</button>
+      <button class="btn btn-danger"  onclick="exportPDF()">📄 PDF</button>
+      <button class="btn btn-outline" onclick="loadData()">⟳ Refresh Data</button>
+      <span id="lastUpdated" style="margin-left:auto;font-size:11px;color:var(--slate-500)"></span>
+    </div>
   </div>
-</div>
+
+</div><!-- /main -->
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxmRlbS0erppMclrMEMyePAQek1oWkKZ-q7YMlV4c9t5jlUNgCkPuU4iqhpl46Y-n0Wew/exec";
+const API_URL  = "https://script.google.com/macros/s/AKfycbxmRlbS0erppMclrMEMyePAQek1oWkKZ-q7YMlV4c9t5jlUNgCkPuU4iqhpl46Y-n0Wew/exec";
 const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfR-BWJRAWFQ5zRhH_D9A1f9Df3g2LYE4vC-5TDzR7NSBFkiA/formResponse";
 
-let budgetHeads = [];
+let budgetHeads  = [];
 let expenditures = [];
-let pieChartInstance = null;
-let barChartInstance = null;
+let pieChartInst = null;
+let barChartInst = null;
 
-// ── UTILITIES ──────────────────────────────────────────────
+// ── HELPERS ────────────────────────────────────────────────
+
+function inr(n) { return Number(n || 0).toLocaleString("en-IN"); }
 
 function showAlert(msg, type = "danger") {
-  const area = document.getElementById("alertArea");
-  area.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
-    ${msg}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>`;
+  const icons = { success:"✅", danger:"⚠️", warning:"ℹ️" };
+  document.getElementById("alertArea").innerHTML =
+    `<div class="sys-alert ${type}">
+       <span>${icons[type]||"•"}</span>
+       <span>${msg}</span>
+       <button class="close-btn" onclick="this.parentElement.remove()">✕</button>
+     </div>`;
 }
 
-function showLoading(msg = "Loading data...") {
-  document.getElementById("loadingMsg").textContent = msg;
+function showLoading(msg) {
+  document.getElementById("loadingMsg").textContent = msg || "Loading…";
   document.getElementById("loadingOverlay").classList.add("active");
 }
-
 function hideLoading() {
   document.getElementById("loadingOverlay").classList.remove("active");
 }
 
-// ── SAVE EXPENSE ───────────────────────────────────────────
+// ── STRAY ROW GUARD ────────────────────────────────────────
+// Removes header rows, "Column N" rows, and fully-blank rows
+const BAD_ROW = /^(code|s\.?no|sl\.?no|head|budget|column\s*\d+|sno)$/i;
+
+function isJunkRow(row) {
+  if (!row) return true;
+  const first = String(row[0] || "").trim();
+  if (!first) return true;            // blank first cell
+  if (BAD_ROW.test(first)) return true; // header-like
+  return false;
+}
+
+// ── SAVE ───────────────────────────────────────────────────
 
 function saveExpense() {
   const date    = document.getElementById("date").value;
@@ -209,62 +696,56 @@ function saveExpense() {
   const remarks = document.getElementById("remarks").value.trim();
 
   if (!date || !voucher || !amount) {
-    showAlert("Please fill Date, Voucher No, and Amount.");
+    showAlert("Please fill Date, Voucher No., and Amount.", "warning");
     return;
   }
 
-  const formData = new FormData();
-  formData.append("entry.825311518",  date);
-  formData.append("entry.947184684",  voucher);
-  formData.append("entry.1891027260", head);
-  formData.append("entry.1930864869", amount);
-  formData.append("entry.1184374967", remarks);
+  const fd = new FormData();
+  fd.append("entry.825311518",  date);
+  fd.append("entry.947184684",  voucher);
+  fd.append("entry.1891027260", head);
+  fd.append("entry.1930864869", amount);
+  fd.append("entry.1184374967", remarks);
 
-  showLoading("Saving expenditure...");
-
-  fetch(FORM_URL, { method: "POST", mode: "no-cors", body: formData })
+  showLoading("Saving expenditure…");
+  fetch(FORM_URL, { method:"POST", mode:"no-cors", body:fd })
     .then(() => {
       hideLoading();
-      showAlert("Expense saved successfully! Data will refresh in 5 seconds.", "success");
-      document.getElementById("date").value    = "";
-      document.getElementById("voucher").value = "";
-      document.getElementById("amount").value  = "";
-      document.getElementById("remarks").value = "";
+      showAlert("Expenditure saved successfully! Refreshing in 5 s…", "success");
+      ["date","voucher","amount","remarks"].forEach(id => document.getElementById(id).value = "");
       setTimeout(loadData, 5000);
     })
-    .catch(err => {
-      hideLoading();
-      showAlert("Failed to save expense: " + err.message);
-    });
+    .catch(err => { hideLoading(); showAlert("Save failed: " + err.message); });
 }
 
-// ── LOAD DATA ──────────────────────────────────────────────
+// ── LOAD ───────────────────────────────────────────────────
 
 async function loadData() {
-  showLoading("Fetching data from Google Sheets...");
+  showLoading("Fetching data from Google Sheets…");
   try {
-    // Append timestamp to bust cache
     const res  = await fetch(API_URL + "?t=" + Date.now());
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
 
-    if (!data.budgetHeads || !data.expenditures) {
-      throw new Error("Unexpected data format from API. Check your Google Apps Script.");
-    }
+    if (!data.budgetHeads || !data.expenditures)
+      throw new Error("Unexpected API format — check your Google Apps Script.");
 
-    // Row 0 is header — skip it
-    budgetHeads  = data.budgetHeads.slice(1);
-    expenditures = data.expenditures.slice(1);
+    budgetHeads  = data.budgetHeads.filter(r => !isJunkRow(r));
+    expenditures = data.expenditures.filter(r => r && r[1] && !BAD_ROW.test(String(r[1]||"").trim()));
 
     renderDashboard();
     renderBudgetTable();
     renderExpenseTable(expenditures);
     renderCharts();
+
+    document.getElementById("lastUpdated").textContent =
+      "Last updated: " + new Date().toLocaleTimeString("en-IN");
+
     hideLoading();
-  } catch (err) {
+  } catch(err) {
     hideLoading();
-    showAlert("⚠️ Could not load data: " + err.message +
-      "<br><small>Check your Apps Script URL and make sure it's deployed as 'Anyone' access.</small>");
+    showAlert("Could not load data: " + err.message +
+      " &nbsp;—&nbsp; <small>Make sure Apps Script is deployed with <b>Anyone</b> access.</small>");
     console.error(err);
   }
 }
@@ -272,65 +753,67 @@ async function loadData() {
 // ── DASHBOARD ──────────────────────────────────────────────
 
 function renderDashboard() {
-  const skipLabels = new Set(["CAPITAL","RECURRING","TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"]);
+  const skip = new Set(["CAPITAL","RECURRING","TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"]);
   let totalBudget = 0, totalSpent = 0;
 
   budgetHeads.forEach(x => {
-    if (!skipLabels.has(x[0])) totalBudget += Number(x[2] || 0);
+    if (!skip.has(x[0])) { const v=parseFloat(x[2]); if(!isNaN(v)) totalBudget+=v; }
   });
   expenditures.forEach(x => {
-    totalSpent += Number(x[4] || 0);
+    const v=parseFloat(x[4]); if(!isNaN(v)) totalSpent+=v;
   });
 
-  const balance     = totalBudget - totalSpent;
-  const utilization = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const balance = totalBudget - totalSpent;
+  const util    = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-  document.getElementById("totalBudget").textContent  = "₹ " + totalBudget.toLocaleString("en-IN");
-  document.getElementById("totalSpent").textContent   = "₹ " + totalSpent.toLocaleString("en-IN");
-  document.getElementById("totalBalance").textContent = "₹ " + balance.toLocaleString("en-IN");
-  document.getElementById("utilization").textContent  = utilization.toFixed(1) + "%";
+  document.getElementById("totalBudget").textContent  = "₹ " + inr(totalBudget);
+  document.getElementById("totalSpent").textContent   = "₹ " + inr(totalSpent);
+  document.getElementById("totalBalance").textContent = "₹ " + inr(balance);
+  document.getElementById("utilization").textContent  = util.toFixed(1) + "%";
+
+  const bar = document.getElementById("utilBar");
+  bar.style.width = Math.min(util, 100) + "%";
+  bar.style.background = util >= 80 ? "#ef4444" : util >= 50 ? "#f59e0b" : "#22c55e";
 }
 
 // ── BUDGET TABLE ───────────────────────────────────────────
 
 function renderBudgetTable() {
-  const tbody = document.querySelector("#budgetTable tbody");
+  const tbody = document.getElementById("budgetTbody");
   tbody.innerHTML = "";
 
   budgetHeads.forEach(head => {
-
-    if (head[0] === "CAPITAL" || head[0] === "RECURRING") {
-      tbody.innerHTML += `<tr class="section-title"><td colspan="6">${head[0]}</td></tr>`;
+    if (head[0]==="CAPITAL" || head[0]==="RECURRING") {
+      tbody.innerHTML += `<tr class="row-section"><td colspan="6">${head[0]}</td></tr>`;
       return;
     }
-
     if (["TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"].includes(head[0])) {
       tbody.innerHTML += `
-        <tr class="total-row">
-          <td>${head[0]}</td><td></td>
-          <td>₹ ${Number(head[2]||0).toLocaleString("en-IN")}</td>
+        <tr class="row-total">
+          <td colspan="2">${head[0]}</td>
+          <td style="text-align:right">₹ ${inr(head[2])}</td>
           <td></td><td></td><td></td>
         </tr>`;
       return;
     }
 
-    const spent = expenditures
-      .filter(x => x[3] === head[1])
-      .reduce((a, b) => a + Number(b[4] || 0), 0);
+    const spent  = expenditures.filter(x=>x[3]===head[1]).reduce((a,b)=>a+parseFloat(b[4]||0),0);
+    const budget = parseFloat(head[2]||0);
+    const bal    = budget - spent;
+    const util   = budget > 0 ? (spent/budget)*100 : 0;
 
-    const budget      = Number(head[2] || 0);
-    const balance     = budget - spent;
-    const utilization = budget > 0 ? (spent / budget) * 100 : 0;
-    const status      = utilization >= 80 ? "🔴" : utilization >= 50 ? "🟡" : "🟢";
+    let cls="util-green", dotCls="dot-green";
+    if (util>=80) { cls="util-red";   dotCls="dot-red"; }
+    else if (util>=50) { cls="util-amber"; dotCls="dot-amber"; }
 
     tbody.innerHTML += `
       <tr>
-        <td>${head[0] || ""}</td>
-        <td>${head[1] || ""}</td>
-        <td>₹ ${budget.toLocaleString("en-IN")}</td>
-        <td>₹ ${spent.toLocaleString("en-IN")}</td>
-        <td>₹ ${balance.toLocaleString("en-IN")}</td>
-        <td>${status} ${utilization.toFixed(1)}%</td>
+        <td><code style="font-size:12px;background:var(--slate-100);padding:2px 6px;border-radius:4px">${head[0]||""}</code></td>
+        <td>${head[1]||""}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">₹ ${inr(budget)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">₹ ${inr(spent)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;color:${bal<0?'var(--red)':'inherit'}">₹ ${inr(bal)}</td>
+        <td><span class="util-badge ${cls}"><span class="util-dot ${dotCls}"></span>${util.toFixed(1)}%</span></td>
       </tr>`;
   });
 }
@@ -338,83 +821,85 @@ function renderBudgetTable() {
 // ── EXPENSE TABLE ──────────────────────────────────────────
 
 function renderExpenseTable(rows) {
-  const tbody = document.querySelector("#expenseTable tbody");
+  const tbody = document.getElementById("expenseTbody");
   tbody.innerHTML = "";
   if (!rows || rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No expenditures found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--slate-500)">No expenditures found.</td></tr>`;
     return;
   }
   rows.forEach(row => {
     tbody.innerHTML += `
       <tr>
-        <td>${row[1] || ""}</td>
-        <td>${row[2] || ""}</td>
-        <td>${row[3] || ""}</td>
-        <td>₹ ${Number(row[4] || 0).toLocaleString("en-IN")}</td>
-        <td>${row[5] || ""}</td>
+        <td>${row[1]||""}</td>
+        <td><code style="font-size:12px">${row[2]||""}</code></td>
+        <td>${row[3]||""}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">₹ ${inr(row[4])}</td>
+        <td style="color:var(--slate-500)">${row[5]||"—"}</td>
       </tr>`;
   });
 }
 
-// ── SEARCH / FILTER ────────────────────────────────────────
+// ── SEARCH ─────────────────────────────────────────────────
 
 function filterExpenses() {
   const q = document.getElementById("search").value.toLowerCase();
-  const filtered = expenditures.filter(row =>
-    row.some(cell => String(cell || "").toLowerCase().includes(q))
-  );
-  renderExpenseTable(filtered);
+  renderExpenseTable(expenditures.filter(r => r.some(c => String(c||"").toLowerCase().includes(q))));
 }
 
 // ── CHARTS ─────────────────────────────────────────────────
 
 function renderCharts() {
-  const skipLabels = new Set(["CAPITAL","RECURRING","TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"]);
-  const normalHeads = budgetHeads.filter(h => h[1] && !skipLabels.has(h[0]));
+  const skip = new Set(["CAPITAL","RECURRING","TOTAL CAPITAL","TOTAL RECURRING","GRAND TOTAL"]);
+  const heads = budgetHeads.filter(h => h[1] && !skip.has(h[0]));
 
-  const labels  = normalHeads.map(h => h[1]);
-  const budgets = normalHeads.map(h => Number(h[2] || 0));
-  const spents  = normalHeads.map(h =>
-    expenditures.filter(x => x[3] === h[1]).reduce((a, b) => a + Number(b[4] || 0), 0)
-  );
+  const labels  = heads.map(h => h[1].length > 18 ? h[1].slice(0,16)+"…" : h[1]);
+  const budgets = heads.map(h => parseFloat(h[2]||0));
+  const spents  = heads.map(h =>
+    expenditures.filter(x=>x[3]===h[1]).reduce((a,b)=>a+parseFloat(b[4]||0),0));
 
-  const totalBudget = budgets.reduce((a, b) => a + b, 0);
-  const totalSpent  = spents.reduce((a, b)  => a + b, 0);
+  const tBudget = budgets.reduce((a,b)=>a+b,0);
+  const tSpent  = spents.reduce((a,b)=>a+b,0);
 
-  // Pie Chart
-  if (pieChartInstance) pieChartInstance.destroy();
-  pieChartInstance = new Chart(document.getElementById("pieChart"), {
-    type: "pie",
+  if (pieChartInst) pieChartInst.destroy();
+  pieChartInst = new Chart(document.getElementById("pieChart"), {
+    type: "doughnut",
     data: {
-      labels: ["Spent", "Remaining"],
+      labels: ["Spent","Remaining"],
       datasets: [{
-        data: [totalSpent, Math.max(0, totalBudget - totalSpent)],
-        backgroundColor: ["#dc2626", "#16a34a"]
+        data: [tSpent, Math.max(0, tBudget - tSpent)],
+        backgroundColor: ["#ef4444","#22c55e"],
+        borderWidth: 0,
+        hoverOffset: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom" } }
+      cutout: "65%",
+      plugins: {
+        legend: { position:"bottom", labels:{ font:{size:12}, padding:14 } }
+      }
     }
   });
 
-  // Bar Chart
-  if (barChartInstance) barChartInstance.destroy();
-  barChartInstance = new Chart(document.getElementById("barChart"), {
+  if (barChartInst) barChartInst.destroy();
+  barChartInst = new Chart(document.getElementById("barChart"), {
     type: "bar",
     data: {
-      labels: labels,
+      labels,
       datasets: [
-        { label: "Budget",  data: budgets, backgroundColor: "#2563eb" },
-        { label: "Spent",   data: spents,  backgroundColor: "#dc2626" }
+        { label:"Budget",  data:budgets, backgroundColor:"rgba(59,130,246,.75)", borderRadius:4 },
+        { label:"Spent",   data:spents,  backgroundColor:"rgba(239,68,68,.75)",  borderRadius:4 }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom" } },
-      scales: { x: { ticks: { maxRotation: 45, font: { size: 10 } } } }
+      plugins: { legend:{ position:"bottom", labels:{ font:{size:12}, padding:14 } } },
+      scales: {
+        x: { ticks:{ maxRotation:45, font:{size:10} }, grid:{ display:false } },
+        y: { ticks:{ callback: v => "₹"+Number(v).toLocaleString("en-IN") }, grid:{ color:"#f1f5f9" } }
+      }
     }
   });
 }
@@ -423,13 +908,10 @@ function renderCharts() {
 
 function exportExcel() {
   if (!expenditures.length) { showAlert("No data to export.", "warning"); return; }
-
-  const wsData = [["Date","Voucher","Head","Amount","Remarks"]];
-  expenditures.forEach(row => wsData.push([row[1],row[2],row[3],Number(row[4]||0),row[5]]));
-
+  const rows = [["Date","Voucher No","Budget Head","Amount (₹)","Remarks"]];
+  expenditures.forEach(r => rows.push([r[1],r[2],r[3],Number(r[4]||0),r[5]]));
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  XLSX.utils.book_append_sheet(wb, ws, "Expenditures");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "Expenditures");
   XLSX.writeFile(wb, "KVK_Gurez_Expenditures.xlsx");
 }
 
@@ -437,39 +919,35 @@ function exportExcel() {
 
 function exportPDF() {
   if (!expenditures.length) { showAlert("No data to export.", "warning"); return; }
-
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: "landscape" });
-
-  doc.setFontSize(14);
-  doc.text("KVK Gurez - Expenditure Register", 14, 15);
-  doc.setFontSize(10);
-  doc.text("Generated: " + new Date().toLocaleDateString("en-IN"), 14, 22);
+  const doc = new jsPDF({ orientation:"landscape" });
+  doc.setFontSize(15); doc.text("KVK Gurez — Expenditure Register", 14, 16);
+  doc.setFontSize(9); doc.setTextColor(100);
+  doc.text("Generated: " + new Date().toLocaleString("en-IN"), 14, 23);
 
   const headers = [["Date","Voucher","Head","Amount","Remarks"]];
-  const rows = expenditures.map(r => [r[1],r[2],r[3],"₹"+Number(r[4]||0).toLocaleString("en-IN"),r[5]]);
+  const rows = expenditures.map(r => [r[1],r[2],r[3],"₹"+inr(r[4]),r[5]||""]);
 
-  // Use autoTable if available, else simple text fallback
   if (doc.autoTable) {
-    doc.autoTable({ head: headers, body: rows, startY: 28, styles: { fontSize: 9 } });
-  } else {
-    let y = 35;
-    doc.setFontSize(8);
-    rows.forEach(r => {
-      doc.text(r.join("   |   "), 14, y);
-      y += 6;
-      if (y > 190) { doc.addPage(); y = 15; }
+    doc.autoTable({
+      head: headers, body: rows, startY: 28,
+      styles: { fontSize:8 },
+      headStyles: { fillColor:[29,78,216] }
     });
+  } else {
+    let y=32; doc.setFontSize(8);
+    rows.forEach(r => { doc.text(r.join(" | "),14,y); y+=6; if(y>190){doc.addPage();y=15;} });
   }
-
   doc.save("KVK_Gurez_Expenditures.pdf");
 }
 
 // ── INIT ───────────────────────────────────────────────────
+document.getElementById("fyLabel").textContent =
+  "FY " + (new Date().getFullYear()-1) + "–" + String(new Date().getFullYear()).slice(2);
+
 loadData();
 </script>
 
-<!-- Bootstrap JS for alert dismiss -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
